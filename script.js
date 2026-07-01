@@ -77,6 +77,7 @@ function updateCards() {
     const y = parseFloat(card.dataset.baseY) + oy;
     card.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   });
+  updatePhotoCards(); // keep photos in sync
 }
 
 /* ═══════════════════════════════════════════
@@ -84,7 +85,7 @@ function updateCards() {
    ═══════════════════════════════════════════ */
 
 const FRICTION        = 0.96;
-const STOP_THRESHOLD   = 0.01;
+const STOP_THRESHOLD  = 0.01;
 const DRAG_SMOOTH     = 0.2;
 const DRAG_RESISTANCE = 0.45;
 
@@ -206,40 +207,55 @@ window.addEventListener('touchend', () => {
 });
 
 /* ═══════════════════════════════════════════
-   PHOTO LAYER
+   PHOTO LAYER — separate array, same tile size
+   so wrapping is perfectly in sync with cards
    ═══════════════════════════════════════════ */
 
 const PHOTO_CONFIG = [
-  { src: "photo1.jpg", caption: "01 / studio",   w: 260, gapX: 1400, gapY: 1200, offsetX: 0,    offsetY: 0,    rot: -2 },
-  { src: "photo2.jpg", caption: "02 / street",   w: 220, gapX: 1400, gapY: 1200, offsetX: 500,  offsetY: 300,  rot: 1.5 },
-  { src: "photo3.jpg", caption: "03 / portrait", w: 300, gapX: 1400, gapY: 1200, offsetX: -400, offsetY: 600,  rot: -1 },
-  { src: "photo4.jpg", caption: "04 / detail",   w: 200, gapX: 1400, gapY: 1200, offsetX: 700,  offsetY: -200, rot: 2 },
-  { src: "photo5.jpg", caption: "05 / wide",     w: 320, gapX: 1400, gapY: 1200, offsetX: -700, offsetY: -400, rot: -1.5 },
+  { src: "photo1.jpg", caption: "01 / studio",   w: 260, offsetX: 550,  offsetY: 450,  rot: -2   },
+  { src: "photo2.jpg", caption: "02 / street",   w: 220, offsetX: -550, offsetY: 300,  rot: 1.5  },
+  { src: "photo3.jpg", caption: "03 / portrait", w: 300, offsetX: 600,  offsetY: -450, rot: -1   },
+  { src: "photo4.jpg", caption: "04 / detail",   w: 200, offsetX: -600, offsetY: -500, rot: 2    },
+  { src: "photo5.jpg", caption: "05 / wide",     w: 320, offsetX: 0,    offsetY: 600,  rot: -1.5 },
 ];
+
+// uses exact same tile size as profile cards — this is what stops the jump/flicker
+const PHOTO_TILE_W = TILE_W;
+const PHOTO_TILE_H = TILE_H;
+
+const photoCards = []; // own array, own wrap calc — never mixed with cards[]
 
 function makePhotoCard(photo) {
   const card = document.createElement('div');
   card.className = 'photo-card';
   card.style.width = photo.w + 'px';
+  card.style.transform = `rotate(${photo.rot}deg)`;
   card.innerHTML = `
-    <img src="${photo.src}" alt="${photo.caption}" decoding="sync">
+    <img src="${photo.src}" alt="${photo.caption}" decoding="async">
     <div class="photo-caption">${photo.caption}</div>
   `;
   return card;
 }
 
 PHOTO_CONFIG.forEach(photo => {
-  const tileW = photo.gapX;
-  const tileH = photo.gapY;
-
   for (let row = -3; row < ROWS; row++) {
     for (let col = -3; col < COLS; col++) {
       const card = makePhotoCard(photo);
-      const bx = col * tileW + (W / 2 - photo.w / 2) + photo.offsetX;
-      const by = row * tileH + (H / 2 - photo.w / 2) + photo.offsetY;
+      const bx = col * PHOTO_TILE_W + (W / 2 - photo.w / 2) + photo.offsetX;
+      const by = row * PHOTO_TILE_H + (H / 2 - photo.w / 2) + photo.offsetY;
       placeCard(card, bx, by);
       canvas.appendChild(card);
-      cards.push(card); // same array — pans and wraps with everything else
+      photoCards.push(card);
     }
   }
 });
+
+function updatePhotoCards() {
+  const ox = ((offsetX % PHOTO_TILE_W) + PHOTO_TILE_W) % PHOTO_TILE_W;
+  const oy = ((offsetY % PHOTO_TILE_H) + PHOTO_TILE_H) % PHOTO_TILE_H;
+  photoCards.forEach(card => {
+    const x = parseFloat(card.dataset.baseX) + ox;
+    const y = parseFloat(card.dataset.baseY) + oy;
+    card.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${card.dataset.rot || 0}deg)`;
+  });
+}

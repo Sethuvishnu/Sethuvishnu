@@ -180,6 +180,10 @@ html, body {
   background: #1a1a1a;
   aspect-ratio: 4 / 5;
   object-fit: cover;
+  will-change: transform;           /* add this */
+  transform: translateZ(0);         /* add this — forces own GPU layer */
+  backface-visibility: hidden;      /* add this */
+  -webkit-backface-visibility: hidden; /* add this — Safari fix */
 }
 
 .photo-caption {
