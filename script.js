@@ -3,8 +3,8 @@
    ═══════════════════════════════════════════ */
 
 const CONFIG = {
-  GAP_X: 1100,
-  GAP_Y: 980,
+  GAP_X: 2500,
+  GAP_Y: 2680,
   CARD_W: 280,
   CARD_H: 320,
 };
@@ -207,16 +207,93 @@ window.addEventListener('touchend', () => {
 });
 
 /* ═══════════════════════════════════════════
+   LIGHTBOX — click a card to view it full screen
+   ═══════════════════════════════════════════ */
+
+const overlay = document.createElement('div');
+overlay.id = 'lightbox-overlay';
+overlay.innerHTML = `
+  <div id="lightbox-inner">
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-caption"></div>
+  </div>
+`;
+document.body.appendChild(overlay);
+
+let dragMoved = false; // distinguish tap from drag
+
+wrap.addEventListener('mousedown', () => { dragMoved = false; });
+wrap.addEventListener('mousemove', () => { dragMoved = true; });
+
+function openLightbox(src, caption, isVideo = false) {
+  const inner = document.getElementById('lightbox-inner');
+  const cap = document.getElementById('lightbox-caption');
+
+  // clear previous media
+  const old = document.getElementById('lightbox-img') || document.getElementById('lightbox-video');
+  if (old) old.remove();
+
+  if (isVideo) {
+    const vid = document.createElement('video');
+    vid.id = 'lightbox-video';
+    vid.src = src;
+    vid.autoplay = true;
+    vid.loop = true;
+    vid.controls = true;
+    vid.muted = true; // start muted so the browser allows autoplay
+    inner.prepend(vid);
+
+    // explicitly trigger playback — .autoplay alone isn't reliable
+    // on a video element created dynamically like this
+    const playPromise = vid.play();
+    if (playPromise) playPromise.catch(() => {}); // ignore benign autoplay-blocked errors
+
+    // once playback actually starts, unmute so the person can hear it
+    vid.addEventListener('playing', () => { vid.muted = false; }, { once: true });
+  } else {
+    const img = document.createElement('img');
+    img.id = 'lightbox-img';
+    img.src = src;
+    inner.prepend(img);
+  }
+
+  cap.textContent = caption;
+  overlay.classList.add('active');
+}
+
+function closeLightbox() {
+  overlay.classList.remove('active');
+  const vid = document.getElementById('lightbox-video');
+  if (vid) vid.pause();
+}
+
+// close when clicking the blurred backdrop (not the media itself)
+overlay.addEventListener('click', e => {
+  if (e.target === overlay) closeLightbox();
+});
+
+// close on Escape key
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+/* ═══════════════════════════════════════════
    PHOTO LAYER — separate array, same tile size
    so wrapping is perfectly in sync with cards
    ═══════════════════════════════════════════ */
 
+const SUPABASE_VIDEO_BASE = "https://pktmfsahirsjqrerugcs.supabase.co/storage/v1/object/public/videos/";
+
 const PHOTO_CONFIG = [
-  { src: "photo1.jpg", caption: "01 / studio",   w: 260, offsetX: 550,  offsetY: 450,  rot: -2   },
-  { src: "photo2.jpg", caption: "02 / street",   w: 220, offsetX: -550, offsetY: 300,  rot: 1.5  },
-  { src: "photo3.jpg", caption: "03 / portrait", w: 300, offsetX: 600,  offsetY: -450, rot: -1   },
-  { src: "photo4.jpg", caption: "04 / detail",   w: 200, offsetX: -600, offsetY: -500, rot: 2    },
-  { src: "photo5.jpg", caption: "05 / wide",     w: 320, offsetX: 0,    offsetY: 600,  rot: -1.5 },
+  { src: "photo1.jpg", caption: "01 / studio",   w: 260, offsetX: 550,  offsetY: 450,  rot: 0 },
+  { src: "photo2.jpg", caption: "02 / street",   w: 220, offsetX: -550, offsetY: 300,  rot: 0 },
+  { src: "photo3.jpg", caption: "03 / portrait", w: 300, offsetX: 600,  offsetY: -450, rot: 0 },
+  { src: "photo4.jpg", caption: "04 / detail",   w: 200, offsetX: -600, offsetY: -500, rot: 0 },
+  { src: "photo5.jpg", caption: "05 / wide",     w: 320, offsetX: 0,    offsetY: 600,  rot: 0 },
+  { src: SUPABASE_VIDEO_BASE + "ART_Main.mp4",   poster: "ART_MAIN_poster.png", caption: "06 / art main",   w: 300, offsetX: -1050, offsetY: -750, rot: 0 },
+  { src: SUPABASE_VIDEO_BASE + "No_body.mp4",    poster: "phone.png",  caption: "07 / no body",    w: 300, offsetX: 1050,  offsetY: 150,  rot: 0 },
+  { src: SUPABASE_VIDEO_BASE + "openpolicy.mp4", poster: "policy.png",          caption: "08 / open policy", w: 400, offsetX: 1050,  offsetY: -450, rot: 0 },
+  { src: SUPABASE_VIDEO_BASE + "super_car.mp4",  poster: "car.png",caption: "09 / super car",  w: 300, offsetX: -1050, offsetY: 550,  rot: 0 },
 ];
 
 // uses exact same tile size as profile cards — this is what stops the jump/flicker
@@ -229,11 +306,28 @@ function makePhotoCard(photo) {
   const card = document.createElement('div');
   card.className = 'photo-card';
   card.style.width = photo.w + 'px';
-  card.style.transform = `rotate(${photo.rot}deg)`;
+  card.dataset.rot = photo.rot;
+
+  const isVideo = photo.src.endsWith('.mp4') || photo.src.endsWith('.webm');
+
+  // In the grid, show a static thumbnail for videos (much lighter than
+  // running a real <video> in every duplicated tile). The real video
+  // only loads when the card is clicked and opens in the lightbox.
+  const media = isVideo
+    ? `<img src="${photo.poster}" alt="${photo.caption}" decoding="async">`
+    : `<img src="${photo.src}" alt="${photo.caption}" decoding="async">`;
+
   card.innerHTML = `
-    <img src="${photo.src}" alt="${photo.caption}" decoding="async">
+    ${media}
+    ${isVideo ? '<div class="play-icon">▶</div>' : ''}
     <div class="photo-caption">${photo.caption}</div>
   `;
+
+  card.addEventListener('click', () => {
+    if (dragMoved) return; // it was a drag, not a tap — don't open
+    openLightbox(photo.src, photo.caption, isVideo);
+  });
+
   return card;
 }
 

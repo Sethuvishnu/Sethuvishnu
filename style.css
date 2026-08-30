@@ -202,3 +202,108 @@ html, body {
 #canvas-wrap.dragging .photo-card {
   transition: none;
 }
+
+
+/* ═══════════════════════════════════════════
+   LIGHTBOX
+   ═══════════════════════════════════════════ */
+
+#lightbox-video {
+  max-width: min(80vw, 900px);
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  display: block;
+}
+
+#lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+#lightbox-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+#lightbox-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  transform: scale(0.92);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#lightbox-overlay.active #lightbox-inner {
+  transform: scale(1);
+}
+
+#lightbox-img {
+  max-width: min(80vw, 700px);
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  object-fit: contain;
+  display: block;
+}
+
+#lightbox-caption {
+  font-size: 11px;
+  font-family: monospace;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+
+
+#lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 999;
+}
+
+#lightbox-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#lightbox-inner {
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#lightbox-inner img,
+#lightbox-inner video {
+  max-width: 90vw;
+  max-height: 80vh;
+  border-radius: 8px;
+}
+
+#lightbox-caption {
+  color: #fff;
+  margin-top: 12px;
+  font-size: 14px;
+  opacity: 0.8;
+}
